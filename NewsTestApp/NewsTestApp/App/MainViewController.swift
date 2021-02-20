@@ -31,14 +31,12 @@ class MainViewController: UIViewController {
         navigationItem.title = "News Test App"
         configureHierarchy()
         configureDataSource()
-        
         fetchNews()
     }
     
     // MARK: - Methods
     
     func fetchNews() {
-        // Проверка, нет ли активного запроса.
         apiClient.headlinesByCountry(country: Method.NewsCountries.russia)
             .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: { completion in
@@ -50,7 +48,6 @@ class MainViewController: UIViewController {
             }, receiveValue: { object in
                 switch object {
                 case .success(let newsObject):
-                    // Добавление полученного значения в массив.
                     self.news.append(contentsOf: newsObject.articles)
                     var currentSnapshot = self.dataSource.snapshot()
                     currentSnapshot.appendItems(self.news, toSection: .main)
@@ -79,7 +76,7 @@ extension MainViewController {
         let item = NSCollectionLayoutItem(layoutSize: itemSize)
 
         let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0),
-                                              heightDimension: .absolute(244))
+                                              heightDimension: .absolute(280))
         let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitem: item, count: 2)
         let spacing = CGFloat(10)
         group.interItemSpacing = .fixed(spacing)
@@ -99,17 +96,20 @@ extension MainViewController {
         collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         collectionView.backgroundColor = .systemBackground
         view.addSubview(collectionView)
+        collectionView.delegate = self
     }
     func configureDataSource() {
         let cellRegistration = UICollectionView.CellRegistration<HeadlinesCell, Article> { (cell, indexPath, identifier) in
             // Populate the cell with our item description.
             cell.label.text = identifier.title
-            cell.image.kf.setImage(with: URL(string: identifier.urlToImage!))
+            cell.image.kf.setImage(with: URL(string: identifier.urlToImage ?? "No Image"))
             cell.contentView.backgroundColor = .lightGray
             cell.layer.borderColor = UIColor.black.cgColor
             cell.layer.borderWidth = 1
-            cell.label.textAlignment = .center
-            cell.label.font = UIFont.preferredFont(forTextStyle: .title1)
+            cell.label.textAlignment = .left
+            cell.label.font = UIFont.preferredFont(forTextStyle: .body)
+            cell.label.numberOfLines = 0
+            cell.image.contentMode = .scaleAspectFit
         }
         
         dataSource = UICollectionViewDiffableDataSource<Section, Article>(collectionView: collectionView) {
@@ -123,5 +123,13 @@ extension MainViewController {
         snapshot.appendSections([.main])
         snapshot.appendItems(news)
         dataSource.apply(snapshot, animatingDifferences: false)
+    }
+}
+
+extension MainViewController: UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        // MARK: Navigation
+        let vc = DetailTableViewController(article: news[indexPath.item])
+        show(vc, sender: self)
     }
 }
